@@ -1,0 +1,425 @@
+const dom = {
+  businessType: document.getElementById('businessType'),
+  platform: document.getElementById('platform'),
+  contentType: document.getElementById('contentType'),
+  audience: document.getElementById('audience'),
+  language: document.getElementById('language'),
+  englishLevel: document.getElementById('englishLevel'),
+  writingStyle: document.getElementById('writingStyle'),
+  tone: document.getElementById('tone'),
+  length: document.getElementById('length'),
+  goal: document.getElementById('goal'),
+  variations: document.getElementById('variations'),
+  includeSeo: document.getElementById('includeSeo'),
+  addEmojis: document.getElementById('addEmojis'),
+  includeCta: document.getElementById('includeCta'),
+  genHashtags: document.getElementById('genHashtags'),
+  humanizeContent: document.getElementById('humanizeContent'),
+  avoidAi: document.getElementById('avoidAi'),
+  generateBtn: document.getElementById('generateBtn'),
+  regenerateBtn: document.getElementById('regenerateBtn'),
+  presetSelect: document.getElementById('presetSelect'),
+  resultBadge: document.getElementById('resultBadge'),
+  resultMeta: document.getElementById('resultMeta'),
+  emptyState: document.getElementById('emptyState'),
+  loadingState: document.getElementById('loadingState'),
+  loadingText: document.getElementById('loadingText'),
+  errorState: document.getElementById('errorState'),
+  errorMessage: document.getElementById('errorMessage'),
+  errorDetail: document.getElementById('errorDetail'),
+  outputArea: document.getElementById('outputArea'),
+  hookContent: document.getElementById('hookContent'),
+  mainContent: document.getElementById('mainContent'),
+  ctaContent: document.getElementById('ctaContent'),
+  hashtagContent: document.getElementById('hashtagContent'),
+  seoContent: document.getElementById('seoContent'),
+  variationsContent: document.getElementById('variationsContent'),
+  charCount: document.getElementById('charCount'),
+  wordCount: document.getElementById('wordCount'),
+  copyBtn: document.getElementById('copyBtn'),
+  downloadTxtBtn: document.getElementById('downloadTxtBtn'),
+  downloadDocBtn: document.getElementById('downloadDocBtn'),
+  cardHook: document.getElementById('cardHook'),
+  cardCta: document.getElementById('cardCta'),
+  cardHashtags: document.getElementById('cardHashtags'),
+  cardSeo: document.getElementById('cardSeo'),
+  cardVariations: document.getElementById('cardVariations'),
+  recentHistory: document.getElementById('recentHistory'),
+  savedTemplates: document.getElementById('savedTemplates')
+};
+
+const PRESETS = {
+  artist: {
+    businessType: 'Artist / Creative Professional', platform: 'Instagram', contentType: 'Social Media Post',
+    audience: 'Artists', tone: 'Emotional', writingStyle: 'Storytelling', goal: 'Brand Awareness',
+    length: 'Medium', englishLevel: 'Simple English'
+  },
+  realestate: {
+    businessType: 'Real Estate Agency', platform: 'Facebook', contentType: 'Ad Copy',
+    audience: 'Real Estate Buyers', tone: 'Professional', writingStyle: 'Persuasive', goal: 'Leads',
+    length: 'Medium', englishLevel: 'Professional English'
+  },
+  smallbiz: {
+    businessType: 'Local Small Business', platform: 'Instagram', contentType: 'Social Media Post',
+    audience: 'Local Businesses', tone: 'Friendly', writingStyle: 'Friendly', goal: 'Engagement',
+    length: 'Short', englishLevel: 'Simple English'
+  },
+  personal: {
+    businessType: 'Personal Brand / Coach', platform: 'LinkedIn', contentType: 'LinkedIn Post',
+    audience: 'Professionals', tone: 'Professional', writingStyle: 'Storytelling', goal: 'Brand Awareness',
+    length: 'Medium', englishLevel: 'Professional English'
+  }
+};
+
+const LOADING_MSGS = [
+  'Crafting your content...', 'Researching your topic...', 'Adding creative touches...',
+  'Optimizing for your platform...', 'Polishing the copy...', 'Making it human-friendly...', 'Almost there...'
+];
+
+let currentContent = '';
+let currentData = null;
+let history = JSON.parse(localStorage.getItem('aigen_history') || '[]');
+let templates = JSON.parse(localStorage.getItem('aigen_templates') || '[]');
+
+function showState(state, msg, detail) {
+  [dom.emptyState, dom.loadingState, dom.errorState, dom.outputArea].forEach(e => e.classList.add('hidden'));
+  if (state === 'empty') dom.emptyState.classList.remove('hidden');
+  else if (state === 'loading') { dom.loadingState.classList.remove('hidden'); rotateText(); }
+  else if (state === 'error') { dom.errorState.classList.remove('hidden'); dom.errorMessage.textContent = msg || 'Error'; dom.errorDetail.textContent = detail || ''; }
+  else if (state === 'result') dom.outputArea.classList.remove('hidden');
+}
+
+let loadInt;
+function rotateText() {
+  let i = 0;
+  if (dom.loadingText) dom.loadingText.textContent = LOADING_MSGS[0];
+  clearInterval(loadInt);
+  loadInt = setInterval(() => { i = (i + 1) % LOADING_MSGS.length; if (dom.loadingText) dom.loadingText.textContent = LOADING_MSGS[i]; }, 2000);
+}
+
+function updateStats(text) {
+  currentContent = text;
+  if (dom.charCount) dom.charCount.innerHTML = '<i class="fas fa-font"></i> ' + text.length + ' chars';
+  if (dom.wordCount) dom.wordCount.innerHTML = '<i class="fas fa-align-left"></i> ' + (text.trim() ? text.trim().split(/\s+/).length : 0) + ' words';
+}
+
+function parseOutput(text) {
+  const sections = { hook: '', main: '', cta: '', hashtags: '', seo: '', variations: [] };
+  let section = 'main', currentVar = [];
+
+  for (const line of text.split('\n')) {
+    const l = line.trim();
+    const h = l.toLowerCase();
+    if (h.startsWith('=== ') && h.endsWith(' ===') || h.startsWith('===')) {
+      const name = h.replace(/={2,}/g, '').trim().replace(/:$/, '');
+      if (name === 'hook') section = 'hook';
+      else if (name === 'main content' || name === 'main') section = 'main';
+      else if (name === 'cta' || name === 'call to action') section = 'cta';
+      else if (name === 'hashtags') section = 'hashtags';
+      else if (name === 'seo keywords' || name === 'seo') section = 'seo';
+      else if (name.startsWith('variation') || name.startsWith('alternative') || name.startsWith('version')) {
+        section = 'var';
+        if (currentVar.length) { sections.variations.push(currentVar.join('\n')); currentVar = []; }
+      } else section = 'main';
+      continue;
+    }
+    if (section === 'var') { if (l) currentVar.push(line); }
+    else if (l) sections[section] += (sections[section] ? '\n' : '') + line;
+  }
+  if (currentVar.length) sections.variations.push(currentVar.join('\n'));
+
+  if (!sections.hook && !sections.main && !sections.cta && !sections.hashtags && !sections.seo && !sections.variations.length) sections.main = text;
+  return sections;
+}
+
+function renderOutput(sections, data) {
+  const show = (id, has) => { const el = document.getElementById(id); if (el) el.style.display = has ? '' : 'none'; };
+  show('cardHook', !!sections.hook);
+  show('cardCta', !!sections.cta);
+  show('cardHashtags', !!sections.hashtags);
+  show('cardSeo', !!sections.seo);
+  show('cardVariations', sections.variations.length > 0);
+
+  if (dom.hookContent) dom.hookContent.textContent = sections.hook || '\u2014';
+  if (dom.mainContent) dom.mainContent.textContent = sections.main || '\u2014';
+  if (dom.ctaContent) dom.ctaContent.textContent = sections.cta || '\u2014';
+  if (dom.hashtagContent) dom.hashtagContent.textContent = sections.hashtags || '\u2014';
+  if (dom.seoContent) dom.seoContent.textContent = sections.seo || '\u2014';
+
+  if (dom.variationsContent) {
+    if (sections.variations.length) {
+      dom.variationsContent.innerHTML = sections.variations.map((v, i) =>
+        '<div class="variation-item"><div class="variation-label">Variation ' + (i + 1) + '</div>' + v.trim() + '</div>'
+      ).join('');
+    } else dom.variationsContent.innerHTML = '<span style="color:var(--gray-400)">\u2014</span>';
+  }
+
+  const all = [sections.hook, sections.main, sections.cta, sections.hashtags, sections.seo, ...sections.variations].filter(Boolean).join('\n\n');
+  updateStats(all);
+
+  if (dom.resultBadge) dom.resultBadge.textContent = (data.platform || '') + ' \u00b7 ' + (data.contentType || '');
+  if (dom.resultMeta) dom.resultMeta.textContent = (data.writingStyle || '') + ' \u00b7 ' + (data.length || '') + ' \u00b7 ' + (data.tone || '');
+}
+
+async function handleGenerate() {
+  const biz = (dom.businessType?.value || '').trim();
+  if (!biz) {
+    if (dom.businessType) { dom.businessType.style.borderColor = 'var(--red)'; dom.businessType.focus(); setTimeout(() => { dom.businessType.style.borderColor = ''; }, 2000); }
+    return;
+  }
+
+  if (dom.generateBtn) { dom.generateBtn.classList.add('loading'); dom.generateBtn.disabled = true; }
+  if (dom.regenerateBtn) dom.regenerateBtn.disabled = true;
+  showState('loading');
+
+  const payload = {
+    businessType: biz,
+    platform: dom.platform?.value || 'Instagram',
+    contentType: dom.contentType?.value || 'Social Media Post',
+    audience: dom.audience?.value || 'Customers',
+    language: dom.language?.value || 'English',
+    englishLevel: dom.englishLevel?.value || 'Simple English',
+    writingStyle: dom.writingStyle?.value || 'Humanized',
+    tone: dom.tone?.value || 'Professional',
+    length: dom.length?.value || 'Medium',
+    goal: dom.goal?.value || 'Sales',
+    variations: parseInt(dom.variations?.value) || 1,
+    includeSeoKeywords: dom.includeSeo?.checked || false,
+    addEmojis: dom.addEmojis?.checked || false,
+    includeCta: dom.includeCta?.checked || false,
+    generateHashtags: dom.genHashtags?.checked || false,
+    humanizeContent: dom.humanizeContent?.checked || false,
+    avoidAiSounding: dom.avoidAi?.checked || false
+  };
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 400) showState('error', 'Validation Error', json.error);
+      else if (res.status === 429) showState('error', 'Rate Limited', json.error);
+      else showState('error', 'Generation Failed', json.error);
+      return;
+    }
+
+    currentData = { ...payload, platform: dom.platform?.value, contentType: dom.contentType?.value };
+    const sections = parseOutput(json.data.content);
+    renderOutput(sections, currentData);
+    showState('result');
+    addHistory(currentData, json.data.content);
+
+  } catch (err) {
+    showState('error', 'Network Error', 'Could not reach the server. Check your connection.');
+  } finally {
+    if (dom.generateBtn) { dom.generateBtn.classList.remove('loading'); dom.generateBtn.disabled = false; }
+    if (dom.regenerateBtn) dom.regenerateBtn.disabled = false;
+    clearInterval(loadInt);
+  }
+}
+
+function handleCopy() {
+  let text = '';
+  document.querySelectorAll('.card-body').forEach(c => { const t = c.textContent; if (t && t !== '\u2014') text += t + '\n\n'; });
+  if (!text.trim()) return;
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text.trim()).then(() => feedback(dom.copyBtn, 'Copied!')).catch(() => fallbackCopy(text.trim()));
+  else fallbackCopy(text.trim());
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); feedback(dom.copyBtn, 'Copied!'); } catch { feedback(dom.copyBtn, 'Failed'); }
+  document.body.removeChild(ta);
+}
+
+function handleDownloadTxt() {
+  if (!currentContent) return;
+  const blob = new Blob([currentContent], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blob, (dom.platform?.value || 'content') + '_' + ((dom.businessType?.value || '').replace(/\s+/g, '_') || 'content') + '.txt');
+  feedback(dom.downloadTxtBtn, 'Downloaded!');
+}
+
+function handleDownloadDoc() {
+  if (!currentContent) return;
+  const html = '<html><body><pre style="font-family:Inter,sans-serif;font-size:14px;line-height:1.7">' + currentContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></body></html>';
+  downloadBlob(new Blob([html], { type: 'application/msword' }), (dom.platform?.value || 'content') + '_' + ((dom.businessType?.value || '').replace(/\s+/g, '_') || 'content') + '.doc');
+  feedback(dom.downloadDocBtn, 'Downloaded!');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function feedback(el, msg) {
+  if (!el) return;
+  const orig = el.innerHTML;
+  el.innerHTML = msg; el.style.pointerEvents = 'none';
+  setTimeout(() => { el.innerHTML = orig; el.style.pointerEvents = ''; }, 1500);
+}
+
+function applyPreset() {
+  const val = dom.presetSelect?.value;
+  if (!val || !PRESETS[val]) { if (dom.presetSelect) dom.presetSelect.value = ''; return; }
+  const p = PRESETS[val];
+  Object.keys(p).forEach(key => {
+    const el = document.getElementById(key);
+    if (el && (el.tagName === 'SELECT' || el.tagName === 'INPUT' && el.type === 'text')) el.value = p[key];
+  });
+  if (dom.presetSelect) dom.presetSelect.value = '';
+}
+
+function addHistory(data, raw) {
+  const entry = {
+    id: Date.now(), timestamp: new Date().toLocaleString(),
+    businessType: data.businessType, platform: data.platform,
+    contentType: data.contentType,
+    content: raw.slice(0, 100) + (raw.length > 100 ? '...' : '')
+  };
+  history.unshift(entry);
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('aigen_history', JSON.stringify(history));
+  renderHistory();
+
+  const exists = templates.some(t => t.businessType === data.businessType && t.platform === data.platform && t.contentType === data.contentType);
+  if (!exists && templates.length < 15) {
+    templates.push({ id: Date.now() + 1, name: data.businessType + ' (' + data.platform + ')', ...data });
+    localStorage.setItem('aigen_templates', JSON.stringify(templates));
+    renderTemplates();
+  }
+}
+
+function renderHistory() {
+  if (!dom.recentHistory) return;
+  if (!history.length) { dom.recentHistory.innerHTML = '<p class="empty-hint">No recent generations.</p>'; return; }
+  dom.recentHistory.innerHTML = history.map(h =>
+    '<div class="saved-item" data-id="' + h.id + '">' +
+      '<span class="saved-del" data-id="' + h.id + '" data-type="history">&times;</span>' +
+      '<strong>' + h.businessType + '</strong>' +
+      '<div class="saved-meta">' + h.platform + ' \u00b7 ' + h.contentType + ' \u00b7 ' + h.timestamp + '</div></div>'
+  ).join('');
+  dom.recentHistory.querySelectorAll('.saved-item').forEach(el => {
+    el.addEventListener('click', function(e) {
+      if (e.target.dataset.type === 'history') return;
+      const id = parseInt(this.dataset.id);
+      const entry = history.find(h => h.id === id);
+      if (!entry) return;
+      if (dom.businessType) dom.businessType.value = entry.businessType || '';
+      if (dom.platform) dom.platform.value = entry.platform || '';
+      if (dom.contentType) dom.contentType.value = entry.contentType || '';
+    });
+  });
+  dom.recentHistory.querySelectorAll('.saved-del[data-type="history"]').forEach(el => {
+    el.addEventListener('click', function(e) { e.stopPropagation();
+      history = history.filter(h => h.id !== parseInt(this.dataset.id));
+      localStorage.setItem('aigen_history', JSON.stringify(history)); renderHistory();
+    });
+  });
+}
+
+function renderTemplates() {
+  if (!dom.savedTemplates) return;
+  if (!templates.length) { dom.savedTemplates.innerHTML = '<p class="empty-hint">No saved templates yet.</p>'; return; }
+  dom.savedTemplates.innerHTML = templates.map(t =>
+    '<div class="saved-item" data-id="' + t.id + '">' +
+      '<span class="saved-del" data-id="' + t.id + '" data-type="template">&times;</span>' +
+      '<strong>' + (t.name || t.businessType) + '</strong>' +
+      '<div class="saved-meta">' + t.platform + ' \u00b7 ' + t.contentType + '</div></div>'
+  ).join('');
+  dom.savedTemplates.querySelectorAll('.saved-item').forEach(el => {
+    el.addEventListener('click', function(e) {
+      if (e.target.dataset.type === 'template') return;
+      const id = parseInt(this.dataset.id);
+      const t = templates.find(t => t.id === id);
+      if (!t) return;
+      Object.keys(t).forEach(key => {
+        if (['id','name','timestamp','content'].includes(key)) return;
+        const el2 = document.getElementById(key);
+        if (el2) {
+          if (el2.type === 'checkbox') el2.checked = !!t[key];
+          else el2.value = t[key] || '';
+        }
+      });
+    });
+  });
+  dom.savedTemplates.querySelectorAll('.saved-del[data-type="template"]').forEach(el => {
+    el.addEventListener('click', function(e) { e.stopPropagation();
+      templates = templates.filter(t => t.id !== parseInt(this.dataset.id));
+      localStorage.setItem('aigen_templates', JSON.stringify(templates)); renderTemplates();
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (dom.generateBtn) dom.generateBtn.addEventListener('click', handleGenerate);
+  if (dom.regenerateBtn) dom.regenerateBtn.addEventListener('click', handleGenerate);
+  if (dom.copyBtn) dom.copyBtn.addEventListener('click', handleCopy);
+  if (dom.downloadTxtBtn) dom.downloadTxtBtn.addEventListener('click', handleDownloadTxt);
+  if (dom.downloadDocBtn) dom.downloadDocBtn.addEventListener('click', handleDownloadDoc);
+  if (dom.presetSelect) dom.presetSelect.addEventListener('change', applyPreset);
+  if (dom.businessType) dom.businessType.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleGenerate(); });
+
+  document.querySelectorAll('.preset-card').forEach(card => {
+    card.addEventListener('click', function() {
+      const preset = this.dataset.preset;
+      if (preset && dom.presetSelect) { dom.presetSelect.value = preset; applyPreset(); }
+      const target = document.getElementById('tools');
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  document.querySelectorAll('.faq-question').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const item = this.closest('.faq-item');
+      if (item) item.classList.toggle('active');
+    });
+  });
+
+  const navToggle = document.getElementById('navToggle');
+  const navMenu = document.getElementById('navMenu');
+  if (navToggle && navMenu) {
+    navToggle.addEventListener('click', function() { navMenu.classList.toggle('active'); this.classList.toggle('active'); });
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', function() { navMenu.classList.remove('active'); navToggle.classList.remove('active'); });
+    });
+  }
+
+  window.addEventListener('scroll', function() {
+    const navbar = document.getElementById('navbar');
+    if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.querySelectorAll('.stat-number').forEach(el => {
+          const target = parseInt(el.dataset.count);
+          if (target) animateCount(el, target);
+        });
+      }
+    });
+  }, { threshold: 0.5 });
+  const heroStats = document.querySelector('.hero-stats');
+  if (heroStats) observer.observe(heroStats);
+
+  renderHistory();
+  renderTemplates();
+});
+
+function animateCount(el, target) {
+  let current = 0;
+  const step = Math.max(1, Math.ceil(target / 40));
+  const interval = setInterval(() => {
+    current += step;
+    if (current >= target) { current = target; clearInterval(interval); }
+    el.textContent = current;
+  }, 30);
+}

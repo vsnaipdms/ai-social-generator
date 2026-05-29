@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - AI Digital Marketing Studio</title>
+  <meta name="description" content="Get in touch with AI Digital Marketing Studio. We offer Digital Marketing, Website Design, Graphic Design, SEO, AI and Art Services.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon"><i class="fas fa-sparkles"></i></div>
+        <span>AI Digital <strong>Studio</strong></span>
+      </a>
+      <div class="nav-toggle" id="navToggle"><span></span><span></span><span></span></div>
+      <ul class="nav-menu" id="navMenu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="index.html#features" class="nav-link">Features</a></li>
+        <li><a href="index.html#tools" class="nav-link">Tools</a></li>
+        <li><a href="contact.html" class="nav-link active">Contact</a></li>
+      </ul>
+      <a href="index.html#tools" class="btn btn-primary btn-sm nav-cta">Get Started</a>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="page-hero-content">
+        <span class="section-badge">Contact Us</span>
+        <h1>Let's Work Together</h1>
+        <p>Have a project in mind? We'd love to hear about it. Send us a message and we'll get back to you right away.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <h2>Our Services</h2>
+          <p>Choose from our range of professional services and let us help you grow your business.</p>
+          <div class="services-grid-contact">
+            <div class="service-card-contact" data-service="Digital Marketing">
+              <div class="service-icon" style="background:#2563eb"><i class="fas fa-chart-line"></i></div>
+              <h4>Digital Marketing</h4>
+            </div>
+            <div class="service-card-contact" data-service="Website Design">
+              <div class="service-icon" style="background:#10b981"><i class="fas fa-laptop-code"></i></div>
+              <h4>Website Design</h4>
+            </div>
+            <div class="service-card-contact" data-service="Graphic Design">
+              <div class="service-icon" style="background:#ec4899"><i class="fas fa-paint-brush"></i></div>
+              <h4>Graphic Design</h4>
+            </div>
+            <div class="service-card-contact" data-service="SEO Services">
+              <div class="service-icon" style="background:#f59e0b"><i class="fas fa-magnifying-glass"></i></div>
+              <h4>SEO Services</h4>
+            </div>
+            <div class="service-card-contact" data-service="AI Services">
+              <div class="service-icon" style="background:#8b5cf6"><i class="fas fa-brain"></i></div>
+              <h4>AI Services</h4>
+            </div>
+            <div class="service-card-contact" data-service="Art Services">
+              <div class="service-icon" style="background:#ef4444"><i class="fas fa-palette"></i></div>
+              <h4>Art Services</h4>
+            </div>
+          </div>
+
+          <div class="contact-details">
+            <h3>Contact Information</h3>
+            <div class="contact-item"><i class="fas fa-phone" style="color:#2563eb"></i><div><strong>Call / WhatsApp</strong><span>+91 9949994082</span></div></div>
+            <div class="contact-item"><i class="fas fa-envelope" style="color:#2563eb"></i><div><strong>Email</strong><span>vsnagoju@gmail.com</span></div></div>
+            <div class="contact-item"><i class="fas fa-globe" style="color:#2563eb"></i><div><strong>Website</strong><span>venkatshyamn.com</span></div></div>
+            <div class="contact-item"><i class="fab fa-linkedin" style="color:#2563eb"></i><div><strong>LinkedIn</strong><span>@venkatshyamn</span></div></div>
+          </div>
+        </div>
+
+        <div class="contact-form-wrapper">
+          <h2>Send a Message</h2>
+          <p>Fill out the form and we'll respond via WhatsApp instantly.</p>
+          <form id="contactForm" class="contact-form">
+            <div class="form-group">
+              <label>Your Name</label>
+              <input type="text" id="contactName" class="form-input" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" id="contactPhone" class="form-input" placeholder="Enter your phone number" required>
+            </div>
+            <div class="form-group">
+              <label>Service Required</label>
+              <select id="contactService" class="form-input">
+                <option value="">Select a service...</option>
+                <option value="Digital Marketing">Digital Marketing</option>
+                <option value="Website Design">Website Design</option>
+                <option value="Graphic Design">Graphic Design</option>
+                <option value="SEO Services">SEO Services</option>
+                <option value="AI Services">AI Services</option>
+                <option value="Art Services">Art Services</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Your Message</label>
+              <textarea id="contactMessage" class="form-input form-textarea" rows="5" placeholder="Tell us about your project..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              <i class="fab fa-whatsapp"></i> Send via WhatsApp
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo"><i class="fas fa-sparkles"></i> AI Digital <strong>Studio</strong></div>
+          <p>Designed &amp; Developed by <strong>Venkat Shyam.N</strong></p>
+          <p class="footer-tagline">Digital Marketer | UI/UX Designer | Graphic &amp; Web Designer | Art | AI</p>
+          <div class="footer-social">
+            <a href="https://venkatshyamn.com/" target="_blank" aria-label="Website"><i class="fas fa-globe"></i></a>
+            <a href="https://www.linkedin.com/in/venkatshyamn/" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="https://www.instagram.com/VenkatShyamN" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/919949994082" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="mailto:vsnagoju@gmail.com" aria-label="Email"><i class="fas fa-envelope"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <a href="index.html">Home</a>
+          <a href="index.html#features">Features</a>
+          <a href="index.html#tools">Tools</a>
+          <a href="contact.html">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Services</h4>
+          <a href="contact.html">Digital Marketing</a>
+          <a href="contact.html">Website Design</a>
+          <a href="contact.html">Graphic Design</a>
+          <a href="contact.html">AI Services</a>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <a href="tel:+919949994082"><i class="fas fa-phone"></i> +91 9949994082</a>
+          <a href="https://wa.me/919949994082" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+          <a href="mailto:vsnagoju@gmail.com"><i class="fas fa-envelope"></i> vsnagoju@gmail.com</a>
+          <a href="https://venkatshyamn.com/" target="_blank"><i class="fas fa-globe"></i> venkatshyamn.com</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 AI Digital Marketing Studio. All rights reserved. Designed &amp; Developed by Venkat Shyam.N</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.service-card-contact').forEach(card => {
+      card.addEventListener('click', function() {
+        document.querySelectorAll('.service-card-contact').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('contactService').value = this.dataset.service;
+      });
+    });
+
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('contactName').value.trim();
+      const phone = document.getElementById('contactPhone').value.trim();
+      const service = document.getElementById('contactService').value;
+      const message = document.getElementById('contactMessage').value.trim();
+      if (!name || !phone || !message) { alert('Please fill all fields.'); return; }
+      const text = encodeURIComponent(
+        `Hi Venkat Shyam.N,%0A%0AI am interested in your services.%0A%0A*Name:* ${name}%0A*Phone:* ${phone}%0A*Service:* ${service || 'Not specified'}%0A*Message:* ${message}`
+      );
+      window.open(`https://wa.me/919949994082?text=${text}`, '_blank');
+    });
+
+    document.querySelectorAll('.nav-toggle').forEach(t => {
+      t.addEventListener('click', function() {
+        document.getElementById('navMenu').classList.toggle('active');
+        this.classList.toggle('active');
+      });
+    });
+  </script>
+</body>
+</html>
