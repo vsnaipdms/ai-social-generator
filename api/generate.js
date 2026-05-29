@@ -1,4 +1,5 @@
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") });
+const apiService = require("./apiService");
 
 function buildPrompt(fields) {
   const {
@@ -182,62 +183,6 @@ ${wordCount} words minimum. ${writingStyle} style. ${tone} tone. Target: ${audie
   return prompt;
 }
 
-const PRIMARY_MODEL = "gemini-2.5-flash";
-const FALLBACK_MODEL = "gemini-2.0-flash";
-const MAX_RETRIES = 3;
-const RETRY_DELAYS = [0, 5000, 15000];
-
-function isRetryableError(msg, status) {
-  const text = (msg || "").toLowerCase();
-  const patterns = [
-    "quota exceeded", "rate limit", "too many requests",
-    "temporary unavail", "api unavail", "network timeout",
-    "service unavail", "resource exhausted", "request rate limit",
-    "429", "503"
-  ];
-  return patterns.some(p => text.includes(p)) || status === 429 || status === 503;
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function friendlyError(msg) {
-  const text = (msg || "").toLowerCase();
-  if (text.includes("quota") || text.includes("rate limit") || text.includes("too many") || text.includes("429") || text.includes("resource exhausted")) {
-    return {
-      error: "AI service busy. Please wait a few seconds and try again.",
-      detail: "Too many requests. Retrying automatically...",
-      code: "quota_exceeded"
-    };
-  }
-  if (text.includes("network") || text.includes("timeout") || text.includes("unavail")) {
-    return {
-      error: "AI service temporarily unavailable.",
-      detail: "Please check your connection and try again.",
-      code: "service_unavailable"
-    };
-  }
-  return {
-    error: "AI service busy. Please wait a few seconds and try again.",
-    detail: msg || "",
-    code: "unknown"
-  };
-}
-
-async function callModel(model, prompt, apiKey, signal) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const start = Date.now();
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
-    signal
-  });
-  const elapsed = Date.now() - start;
-  return { response, elapsed };
-}
-
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -252,102 +197,61 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: "Missing required field: businessType" });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const hasAnyKey = ["GROQ_API_KEY", "OPENROUTER_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "TOGETHER_API_KEY"]
+    .some(k => process.env[k]);
+  if (!hasAnyKey) {
     return res.status(500).json({
-      error: "Server configuration error: API key not set.",
-      detail: "Set GEMINI_API_KEY in .env.local (local) or Vercel env vars (production)."
+      error: "No AI provider API keys configured.",
+      detail: "Set at least one of GROQ_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY, HF_TOKEN, or TOGETHER_API_KEY."
     });
   }
 
   try {
     const prompt = buildPrompt(req.body);
-    const models = [PRIMARY_MODEL, FALLBACK_MODEL];
-    let lastError = null;
-    let usedModel = null;
-    let totalRetries = 0;
+    const result = await apiService.generate(prompt);
 
-    for (let mi = 0; mi < models.length; mi++) {
-      const model = models[mi];
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const delay = RETRY_DELAYS[attempt - 1] || 0;
-          if (delay > 0) {
-            console.log(`Waiting ${delay}ms before ${model} attempt ${attempt}...`);
-            await sleep(delay);
-          }
-
-          console.log(`Attempt ${attempt}/${MAX_RETRIES} on model: ${model}`);
-          const { response, elapsed } = await callModel(model, prompt, apiKey);
-          console.log(`Response time: ${elapsed}ms, status: ${response.status}`);
-
-          if (response.ok) {
-            const json = await response.json();
-            const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              usedModel = model;
-              console.log(`Success on ${model}, attempt ${attempt}, elapsed: ${elapsed}ms`);
-              return res.status(200).json({
-                success: true,
-                data: {
-                  content: text.trim(),
-                  platform: req.body.platform || "",
-                  contentType: req.body.contentType || "",
-                  tone: req.body.tone || "",
-                  language: req.body.language || "",
-                  goal: req.body.goal || "",
-                  businessType: req.body.businessType || "",
-                  writingStyle: req.body.writingStyle || "",
-                  length: req.body.length || "",
-                  audience: req.body.audience || "",
-                  englishLevel: req.body.englishLevel || "",
-                  _model: model,
-                  _retries: totalRetries
-                }
-              });
-            }
-          }
-
-          const errMsg = await response.json().then(j => j.error?.message || JSON.stringify(j)).catch(() => response.statusText);
-          lastError = errMsg;
-
-          if (isRetryableError(errMsg, response.status)) {
-            totalRetries++;
-            console.log(`Retryable error (${errMsg.slice(0, 60)}), retrying ${model}...`);
-            continue;
-          }
-
-          break;
-        } catch (err) {
-          lastError = err.message;
-          if (err.name === "AbortError") {
-            throw err;
-          }
-          if (isRetryableError(err.message)) {
-            totalRetries++;
-            console.log(`Network error (${err.message.slice(0, 60)}), retrying ${model}...`);
-            continue;
-          }
-          break;
+    if (result.success) {
+      trackEvent("provider_used", { provider: result.provider, model: result.model, elapsed: result.elapsed });
+      return res.status(200).json({
+        success: true,
+        data: {
+          content: result.content,
+          platform: req.body.platform || "",
+          contentType: req.body.contentType || "",
+          tone: req.body.tone || "",
+          language: req.body.language || "",
+          goal: req.body.goal || "",
+          businessType: req.body.businessType || "",
+          writingStyle: req.body.writingStyle || "",
+          length: req.body.length || "",
+          audience: req.body.audience || "",
+          englishLevel: req.body.englishLevel || "",
+          _provider: result.providerName,
+          _providerId: result.provider,
+          _model: result.model,
+          _elapsed: result.elapsed
         }
-      }
-
-      if (mi === 0 && lastError) {
-        console.log(`Primary model ${PRIMARY_MODEL} exhausted, switching to fallback ${FALLBACK_MODEL}`);
-      }
+      });
     }
 
-    const friendly = friendlyError(lastError);
-    return res.status(429).json(friendly);
+    trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
+    return res.status(429).json({
+      error: result.error || "All AI providers are currently unavailable.",
+      detail: result.detail || "Please try again in a few moments.",
+      code: result.code || "all_providers_failed"
+    });
 
   } catch (err) {
     if (err.name === "AbortError") {
-      return res.status(504).json({
-        error: "Request taking too long. Please retry.",
-        code: "timeout"
-      });
+      return res.status(504).json({ error: "Request taking too long. Please retry.", code: "timeout" });
     }
     console.error("Server error:", err.message);
-    return res.status(500).json({ error: "Failed to generate content. Please try again." });
+    return res.status(500).json({ error: "Failed to generate content. Please try again.", code: "server_error" });
   }
 };
+
+function trackEvent(name, data) {
+  try {
+    console.log(`[ANALYTICS] ${name}:`, JSON.stringify(data));
+  } catch (e) {}
+}

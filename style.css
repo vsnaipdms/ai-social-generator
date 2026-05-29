@@ -693,6 +693,25 @@ select.form-input option { background: var(--white); color: var(--black); }
 }
 .result-info { font-size: 0.72rem; color: var(--gray-400); }
 
+.provider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+.provider-badge.provider-groq { background: #e8f5e9; color: #2e7d32; }
+.provider-badge.provider-openrouter { background: #fff3e0; color: #e65100; }
+.provider-badge.provider-gemini { background: #e3f2fd; color: #1565c0; }
+.provider-badge.provider-huggingface { background: #fce4ec; color: #c62828; }
+.provider-badge.provider-togetherai { background: #f3e5f5; color: #7b1fa2; }
+.provider-badge.provider-unknown { background: var(--gray-100); color: var(--gray-500); }
+
 .output-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -183,6 +183,14 @@ function renderOutput(sections, data) {
 
   if (dom.resultBadge) dom.resultBadge.textContent = (data.platform || '') + ' \u00b7 ' + (data.contentType || '');
   if (dom.resultMeta) dom.resultMeta.textContent = (data.writingStyle || '') + ' \u00b7 ' + (data.length || '') + ' \u00b7 ' + (data.tone || '');
+  const providerBadge = document.getElementById('providerBadge');
+  if (providerBadge && data._provider) {
+    providerBadge.textContent = data._provider + ' \u00b7 ' + (data._elapsed || '') + 'ms';
+    providerBadge.style.display = 'inline-flex';
+    providerBadge.className = 'provider-badge provider-' + (data._providerId || 'unknown');
+  } else if (providerBadge) {
+    providerBadge.style.display = 'none';
+  }
 }
 
 const COOLDOWN_MS = 10000;
@@ -315,12 +323,13 @@ async function handleGenerate() {
       return;
     }
 
-    currentData = { ...payload, platform: dom.platform?.value, contentType: dom.contentType?.value };
+    currentData = { ...payload, platform: dom.platform?.value, contentType: dom.contentType?.value, _provider: json.data._provider, _providerId: json.data._providerId, _model: json.data._model, _elapsed: json.data._elapsed };
     const sections = parseOutput(json.data.content);
     renderOutput(sections, currentData);
     showState('result');
     addHistory(currentData, json.data.content);
     setCooldownTimer();
+    trackEvent('provider_used', { provider: json.data._providerId, model: json.data._model, elapsed: json.data._elapsed });
 
   } catch (err) {
     if (err.name === 'AbortError') {
