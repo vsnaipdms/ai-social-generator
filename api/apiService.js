@@ -1,4 +1,4 @@
-const PROVIDER_TIMEOUT = 8000;
+const PROVIDER_TIMEOUT = 15000;
 const GLOBAL_TIMEOUT = 20000;
 const MAX_RETRIES = 2;
 const RETRY_DELAYS = [0, 2000];
@@ -213,23 +213,39 @@ async function callProvider(provider, apiKey, prompt, signal, emit) {
 }
 
 async function generate(prompt, options = {}) {
-  const { signal, onStatus } = options;
+  const { signal, onStatus, forceProvider } = options;
   const startTime = Date.now();
   const lastError = { msg: '', code: '' };
-  let lastProvider = '';
+  let lastProviderId = '';
+  let lastProviderName = '';
 
   const activeProviders = [...PROVIDERS];
   if (process.env.ENABLE_TOGETHER_AI === 'true' && process.env.TOGETHER_API_KEY) {
     activeProviders.push(TOGETHER_PROVIDER);
   }
 
-  for (let i = 0; i < activeProviders.length; i++) {
-    const provider = activeProviders[i];
+  const providersToTry = forceProvider
+    ? activeProviders.filter(p => p.id === forceProvider)
+    : activeProviders;
 
-    if (Date.now() - startTime > GLOBAL_TIMEOUT) {
+  if (forceProvider && providersToTry.length === 0) {
+    return {
+      success: false,
+      error: 'Unknown provider: ' + forceProvider,
+      provider: forceProvider,
+      providerName: forceProvider
+    };
+  }
+
+  for (let i = 0; i < providersToTry.length; i++) {
+    const provider = providersToTry[i];
+
+    if (!forceProvider && Date.now() - startTime > GLOBAL_TIMEOUT) {
       console.log(`[GLOBAL] 20s timeout reached`);
       lastError.msg = 'Global timeout exceeded';
       lastError.code = 'global_timeout';
+      lastProviderName = provider.name;
+      lastProviderId = provider.id;
       break;
     }
 
@@ -240,7 +256,14 @@ async function generate(prompt, options = {}) {
     }
 
     if (onStatus) onStatus({ status: 'trying', provider: provider.name });
-    const result = await callProvider(provider, apiKey, prompt, signal, onStatus);
+
+    let result;
+    try {
+      result = await callProvider(provider, apiKey, prompt, signal, onStatus);
+    } catch (err) {
+      console.error(provider.name, err.message);
+      result = { error: err.message, code: 'exception' };
+    }
 
     if (result.text) {
       const totalElapsed = Date.now() - startTime;
@@ -259,9 +282,22 @@ async function generate(prompt, options = {}) {
 
     lastError.msg = result.error || lastError.msg;
     lastError.code = result.code || lastError.code;
+    lastProviderId = provider.id;
+    lastProviderName = provider.name;
 
-    if (i < activeProviders.length - 1) {
-      const next = activeProviders[i + 1];
+    if (forceProvider) {
+      return {
+        success: false,
+        error: result.error || 'Provider failed',
+        detail: result.error || '',
+        code: result.code || 'provider_failed',
+        provider: provider.id,
+        providerName: provider.name
+      };
+    }
+
+    if (i < providersToTry.length - 1) {
+      const next = providersToTry[i + 1];
       const reason = result.code === 'timeout' ? 'Timeout (' + PROVIDER_TIMEOUT + 'ms)' : result.code === 'non_retryable' ? 'Provider error' : result.code || 'Failed';
       console.log(`[FALLBACK] ${provider.name} -> ${next.name} (${reason})`);
       if (onStatus) onStatus({ status: 'switching', from: provider.name, to: next.name, reason });
@@ -273,7 +309,9 @@ async function generate(prompt, options = {}) {
     success: false,
     error: 'All AI providers temporarily unavailable. Please retry.',
     detail: lastError.msg,
-    code: lastError.code || 'all_providers_failed'
+    code: lastError.code || 'all_providers_failed',
+    provider: lastProviderId || null,
+    providerName: lastProviderName || null
   };
 }
 

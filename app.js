@@ -364,7 +364,11 @@ async function handleGenerate() {
     } else if (errorData) {
       trackEvent('failed_generation', { code: errorData.code || '' });
       if (errorData.code === 'quota_exceeded') trackEvent('quota_error', {});
-      showState('error', errorData.error || 'Generation Failed', errorData.detail || '');
+      const errMsg = errorData.error || 'Generation Failed';
+      const errDetail = errorData.failedProviderName
+        ? errorData.failedProviderName + ': ' + (errorData.detail || errorData.error || '')
+        : errorData.detail || '';
+      showState('error', errMsg, errDetail);
     } else {
       showState('error', 'Generation Failed', 'No response received.');
     }

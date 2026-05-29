@@ -192,6 +192,14 @@ module.exports = async (req, res) => {
   res.setHeader("Expires", "0");
   res.setHeader("Surrogate-Control", "no-store");
 
+  console.log("--- ENV CHECK ---");
+  console.log("GROQ:", !!process.env.GROQ_API_KEY);
+  console.log("OPENROUTER:", !!process.env.OPENROUTER_API_KEY);
+  console.log("GEMINI:", !!process.env.GEMINI_API_KEY);
+  console.log("HF:", !!process.env.HF_TOKEN);
+  console.log("TOGETHER:", !!process.env.TOGETHER_API_KEY);
+  console.log("ENABLE_TOGETHER:", process.env.ENABLE_TOGETHER_AI);
+
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
@@ -221,7 +229,9 @@ module.exports = async (req, res) => {
 
   try {
     const prompt = buildPrompt(req.body);
-    const result = await apiService.generate(prompt, { onStatus: emit });
+    const opts = { onStatus: emit };
+    if (req.body.forceProvider) opts.forceProvider = req.body.forceProvider;
+    const result = await apiService.generate(prompt, opts);
 
     if (result.success) {
       if (!result.content || !result.content.trim()) {
@@ -253,11 +263,17 @@ module.exports = async (req, res) => {
       }
     } else {
       trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
+      const hasProvider = result.providerName && result.detail && !result.detail.startsWith("All providers");
+      const errMsg = hasProvider
+        ? result.providerName + " failed: " + result.detail
+        : result.error || "All AI providers are currently unavailable.";
       emit({
         status: "error",
-        error: result.error || "All AI providers are currently unavailable.",
-        detail: result.detail || "Please try again in a few moments.",
-        code: result.code || "all_providers_failed"
+        error: errMsg,
+        detail: hasProvider ? (result.providerName + ": " + result.detail) : (result.detail || ""),
+        code: result.code || "all_providers_failed",
+        failedProvider: result.provider || null,
+        failedProviderName: result.providerName || null
       });
     }
 
