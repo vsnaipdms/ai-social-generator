@@ -635,6 +635,15 @@ select.form-input option { background: var(--white); color: var(--black); }
 }
 .btn-primary.loading .btn-text { display: none; }
 .btn-primary.loading .spinner { display: block; }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cooldown-timer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--red);
+  margin-top: 6px;
+  font-weight: 500;
+}
 
 /* ===== OUTPUT ===== */
 .output-area.hidden { display: none; }

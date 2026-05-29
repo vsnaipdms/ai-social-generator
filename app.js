@@ -185,10 +185,75 @@ function renderOutput(sections, data) {
   if (dom.resultMeta) dom.resultMeta.textContent = (data.writingStyle || '') + ' \u00b7 ' + (data.length || '') + ' \u00b7 ' + (data.tone || '');
 }
 
+const COOLDOWN_MS = 10000;
+const TIMEOUT_MS = 30000;
+let currentAbort = null;
+
+function getCooldown() {
+  const t = parseInt(localStorage.getItem('aigen_cooldown') || '0');
+  return Math.max(0, t - Date.now());
+}
+
+function setCooldown() {
+  localStorage.setItem('aigen_cooldown', String(Date.now() + COOLDOWN_MS));
+}
+
+function updateCooldownDisplay() {
+  const el = document.getElementById('cooldownDisplay');
+  if (!el) return;
+  const remaining = getCooldown();
+  if (remaining > 0) {
+    el.textContent = 'Wait ' + Math.ceil(remaining / 1000) + 's';
+    el.style.display = 'inline';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function setButtonsLoading(loading) {
+  [dom.generateBtn, dom.regenerateBtn].forEach(btn => {
+    if (!btn) return;
+    if (loading) {
+      btn.classList.add('loading');
+      btn.disabled = true;
+    } else {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  });
+  if (loading && dom.generateBtn) {
+    const span = dom.generateBtn.querySelector('.btn-text');
+    if (span) span.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generating...';
+  }
+  if (!loading && dom.generateBtn) {
+    const span = dom.generateBtn.querySelector('.btn-text');
+    if (span) span.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Content';
+  }
+}
+
+function setCooldownTimer() {
+  const el = document.getElementById('cooldownDisplay');
+  if (!el) return;
+  setCooldown();
+  updateCooldownDisplay();
+  if (getCooldown() > 0) {
+    const ci = setInterval(() => {
+      updateCooldownDisplay();
+      if (getCooldown() <= 0) { clearInterval(ci); updateCooldownDisplay(); }
+    }, 500);
+  }
+}
+
 async function handleGenerate() {
   const biz = (dom.businessType?.value || '').trim();
   if (!biz) {
     if (dom.businessType) { dom.businessType.style.borderColor = 'var(--red)'; dom.businessType.focus(); setTimeout(() => { dom.businessType.style.borderColor = ''; }, 2000); }
+    return;
+  }
+
+  const cooldown = getCooldown();
+  if (cooldown > 0) {
+    showState('error', 'Please wait', 'Wait ' + Math.ceil(cooldown / 1000) + ' seconds before generating again.');
     return;
   }
 
@@ -200,9 +265,11 @@ async function handleGenerate() {
     tone: dom.tone?.value || ''
   });
 
-  if (dom.generateBtn) { dom.generateBtn.classList.add('loading'); dom.generateBtn.disabled = true; }
-  if (dom.regenerateBtn) dom.regenerateBtn.disabled = true;
+  setButtonsLoading(true);
   showState('loading');
+
+  currentAbort = new AbortController();
+  const timeoutId = setTimeout(() => currentAbort.abort(), TIMEOUT_MS);
 
   const payload = {
     businessType: biz,
@@ -228,14 +295,23 @@ async function handleGenerate() {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: currentAbort.signal
     });
     const json = await res.json();
 
     if (!res.ok) {
-      if (res.status === 400) showState('error', 'Validation Error', json.error);
-      else if (res.status === 429) showState('error', 'Rate Limited', json.error);
-      else showState('error', 'Generation Failed', json.error);
+      trackEvent('failed_generation', { status: res.status, code: json.code || '' });
+      if (json.code === 'quota_exceeded') trackEvent('quota_error', {});
+      if (json.code === 'timeout') {
+        showState('error', 'Request taking too long. Please retry.', '');
+      } else if (json.code === 'quota_exceeded' || res.status === 429) {
+        showState('error', json.error || 'AI service busy', json.detail || 'Please wait a few seconds and try again.');
+      } else if (res.status === 400) {
+        showState('error', 'Validation Error', json.error);
+      } else {
+        showState('error', json.error || 'Generation Failed', json.detail || '');
+      }
       return;
     }
 
@@ -244,13 +320,22 @@ async function handleGenerate() {
     renderOutput(sections, currentData);
     showState('result');
     addHistory(currentData, json.data.content);
+    setCooldownTimer();
 
   } catch (err) {
-    showState('error', 'Network Error', 'Could not reach the server. Check your connection.');
+    if (err.name === 'AbortError') {
+      trackEvent('failed_generation', { code: 'timeout' });
+      showState('error', 'Request taking too long. Please retry.', '');
+    } else {
+      trackEvent('failed_generation', { code: 'network' });
+      showState('error', 'Network Error', 'Could not reach the server. Check your connection.');
+    }
   } finally {
-    if (dom.generateBtn) { dom.generateBtn.classList.remove('loading'); dom.generateBtn.disabled = false; }
-    if (dom.regenerateBtn) dom.regenerateBtn.disabled = false;
+    clearTimeout(timeoutId);
+    currentAbort = null;
+    setButtonsLoading(false);
     clearInterval(loadInt);
+    updateCooldownDisplay();
   }
 }
 
@@ -485,6 +570,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   renderHistory();
   renderTemplates();
+  updateCooldownDisplay();
 });
 
 function animateCount(el, target) {
