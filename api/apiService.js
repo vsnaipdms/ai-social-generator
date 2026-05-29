@@ -5,27 +5,6 @@ const RETRY_DELAYS = [0, 2000];
 
 const PROVIDERS = [
   {
-    id: 'gemini',
-    name: 'Gemini',
-    envKey: 'GEMINI_API_KEY',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
-    defaultModel: 'gemini-2.5-flash',
-    formatRequest(apiKey, prompt, model) {
-      const m = model || this.defaultModel;
-      return {
-        url: `${this.baseUrl}/${m}:generateContent?key=${apiKey}`,
-        options: {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
-        }
-      };
-    },
-    parseResponse(json) {
-      return json.candidates?.[0]?.content?.parts?.[0]?.text;
-    }
-  },
-  {
     id: 'groq',
     name: 'Groq',
     envKey: 'GROQ_API_KEY',
@@ -74,11 +53,32 @@ const PROVIDERS = [
     }
   },
   {
+    id: 'gemini',
+    name: 'Gemini',
+    envKey: 'GEMINI_API_KEY',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+    defaultModel: 'gemini-2.5-flash',
+    formatRequest(apiKey, prompt, model) {
+      const m = model || this.defaultModel;
+      return {
+        url: `${this.baseUrl}/${m}:generateContent?key=${apiKey}`,
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+        }
+      };
+    },
+    parseResponse(json) {
+      return json.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+  },
+  {
     id: 'huggingface',
     name: 'Hugging Face',
     envKey: 'HF_TOKEN',
     baseUrl: 'https://api-inference.huggingface.co/models',
-    defaultModel: 'mistralai/Mistral-7B-Instruct-v0.3',
+    defaultModel: 'google/flan-t5-large',
     formatRequest(apiKey, prompt, model) {
       return {
         url: `${this.baseUrl}/${model || this.defaultModel}`,
@@ -87,7 +87,7 @@ const PROVIDERS = [
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
           body: JSON.stringify({
             inputs: prompt,
-            parameters: { temperature: 0.7, max_new_tokens: 4096, return_full_text: false }
+            options: { wait_for_model: true }
           })
         }
       };
@@ -168,6 +168,28 @@ async function callProvider(provider, apiKey, prompt, signal, emit) {
 
       console.log("Provider:", provider.name);
       console.log("Response:", response.status, response.statusText);
+
+      if (provider.id === 'huggingface') {
+        console.log("HF_TOKEN exists:", !!process.env.HF_TOKEN);
+        console.log("HF model:", model);
+        const raw = await response.text();
+        console.log("HF response:", raw.slice(0, 600));
+        if (!response.ok) {
+          return { error: `HF ${response.status}`, code: 'non_retryable' };
+        }
+        let json;
+        try { json = JSON.parse(raw); } catch { return { error: 'Invalid HF response', code: 'non_retryable' }; }
+        let result;
+        if (Array.isArray(json)) result = json[0]?.generated_text;
+        else if (json.generated_text) result = json.generated_text;
+        else return { error: 'Invalid HF response format', code: 'non_retryable' };
+        if (!result || !result.trim()) {
+          console.log(`[HF] Empty content`);
+          continue;
+        }
+        console.log(`[HF] Success (${elapsed}ms): ${result.slice(0, 60)}...`);
+        return { text: result.trim(), provider: provider.id, providerName: provider.name, model, elapsed };
+      }
 
       if (!response.ok) {
         let errMsg;
