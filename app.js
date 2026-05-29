@@ -183,9 +183,8 @@ function renderOutput(sections, data) {
 
   if (dom.resultBadge) dom.resultBadge.textContent = (data.platform || '') + ' \u00b7 ' + (data.contentType || '');
   if (dom.resultMeta) dom.resultMeta.textContent = (data.writingStyle || '') + ' \u00b7 ' + (data.length || '') + ' \u00b7 ' + (data.tone || '');
-  console.log("Provider:", data._provider, data._providerId, data._elapsed + "ms");
   const providerBadge = document.getElementById('providerBadge');
-  if (providerBadge && data._provider) {
+  if (providerBadge && data._generated) {
     if (data._elapsed) {
       const secs = (data._elapsed / 1000).toFixed(1);
       providerBadge.textContent = '\u26a1 Generated in ' + secs + 's';
@@ -332,11 +331,11 @@ async function handleGenerate() {
         try {
           const msg = JSON.parse(line);
           if (msg.status === 'trying') {
-            if (dom.loadingText) dom.loadingText.textContent = 'Trying ' + msg.provider + '...';
+            if (dom.loadingText) dom.loadingText.textContent = 'Generating content...';
           } else if (msg.status === 'switching') {
-            if (dom.loadingText) dom.loadingText.textContent = 'Switching to ' + msg.to + '...';
+            if (dom.loadingText) dom.loadingText.textContent = 'Still working on it...';
           } else if (msg.status === 'done') {
-            if (dom.loadingText) dom.loadingText.textContent = 'Generating with ' + msg.provider + '...';
+            if (dom.loadingText) dom.loadingText.textContent = 'Finalizing output...';
           } else if (msg.status === 'success') {
             resultData = msg;
           } else if (msg.status === 'error') {
@@ -355,25 +354,21 @@ async function handleGenerate() {
           ...payload,
           platform: dom.platform?.value,
           contentType: dom.contentType?.value,
-          _provider: resultData.provider || resultData._provider,
-          _providerId: resultData.providerId || resultData._providerId,
-          _model: resultData.model || resultData._model,
-          _elapsed: resultData.elapsed || resultData._elapsed
+          _generated: true,
+          _elapsed: resultData._elapsed
         };
         const sections = parseOutput(resultData.content);
         renderOutput(sections, currentData);
         showState('result');
         addHistory(currentData, resultData.content);
         setCooldownTimer();
-        trackEvent('provider_used', { provider: currentData._providerId, model: currentData._model, elapsed: currentData._elapsed });
+        console.log("Generated in", currentData._elapsed + "ms");
       }
     } else if (errorData) {
       trackEvent('failed_generation', { code: errorData.code || '' });
       if (errorData.code === 'quota_exceeded') trackEvent('quota_error', {});
       const errMsg = errorData.error || 'Generation Failed';
-      const errDetail = errorData.failedProviderName
-        ? errorData.failedProviderName + ': ' + (errorData.detail || errorData.error || '')
-        : errorData.detail || '';
+      const errDetail = errorData.detail || '';
       showState('error', errMsg, errDetail);
     } else {
       showState('error', 'Generation Failed', 'No response received.');

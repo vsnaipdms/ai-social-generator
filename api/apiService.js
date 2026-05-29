@@ -94,7 +94,7 @@ async function callProvider(provider, apiKey, prompt, signal, emit) {
 
     const model = provider.defaultModel;
     const req = provider.formatRequest(apiKey, prompt, model);
-    if (emit) emit({ status: 'trying', provider: provider.name, attempt });
+    if (emit) emit({ status: 'trying', attempt });
 
     const controller = new AbortController();
     const providerTimeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT);
@@ -185,14 +185,14 @@ async function generate(prompt, options = {}) {
     }
 
     console.log("Trying:", provider.name);
-    if (onStatus) onStatus({ status: 'trying', provider: provider.name });
+    if (onStatus) onStatus({ status: 'trying' });
 
     let lastErrMsg = '';
     try {
       const result = await callProvider(provider, apiKey, prompt, signal, onStatus);
       if (result && result.content && result.content.trim()) {
         console.log("[DONE] " + provider.name + " responded in " + result.elapsed + "ms");
-        if (onStatus) onStatus({ status: 'done', provider: provider.name, elapsed: result.elapsed });
+        if (onStatus) onStatus({ status: 'done', elapsed: result.elapsed });
         return { success: true, provider: result.provider, providerName: result.providerName, content: result.content, model: result.model, elapsed: result.elapsed };
       }
     } catch (err) {
@@ -203,7 +203,7 @@ async function generate(prompt, options = {}) {
 
     if (!forceProvider && i < providersToTry.length - 1) {
       const next = providersToTry[i + 1];
-      if (onStatus) onStatus({ status: 'switching', from: provider.name, to: next.name, reason: lastErrMsg || 'Failed' });
+      if (onStatus) onStatus({ status: 'switching' });
     }
   }
 

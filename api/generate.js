@@ -244,12 +244,9 @@ module.exports = async (req, res) => {
         emit({
           status: "success",
           success: true,
-          provider: result.providerName,
           content: result.content,
-          _provider: result.providerName,
-          _providerId: result.provider,
-          _model: result.model,
           _elapsed: result.elapsed,
+          _generated: true,
           platform: req.body.platform || "",
           contentType: req.body.contentType || "",
           tone: req.body.tone || "",
@@ -268,9 +265,7 @@ module.exports = async (req, res) => {
         status: "error",
         error: result.error || "All AI providers are currently unavailable.",
         detail: result.detail || "",
-        code: result.code || "all_providers_failed",
-        failedProvider: result.provider || null,
-        failedProviderName: result.providerName || null
+        code: result.code || "all_providers_failed"
       });
     }
 
