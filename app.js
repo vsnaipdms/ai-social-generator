@@ -183,11 +183,17 @@ function renderOutput(sections, data) {
 
   if (dom.resultBadge) dom.resultBadge.textContent = (data.platform || '') + ' \u00b7 ' + (data.contentType || '');
   if (dom.resultMeta) dom.resultMeta.textContent = (data.writingStyle || '') + ' \u00b7 ' + (data.length || '') + ' \u00b7 ' + (data.tone || '');
+  console.log("Provider:", data._provider, data._providerId, data._elapsed + "ms");
   const providerBadge = document.getElementById('providerBadge');
   if (providerBadge && data._provider) {
-    providerBadge.textContent = data._provider + ' \u00b7 ' + (data._elapsed || '') + 'ms';
+    if (data._elapsed) {
+      const secs = (data._elapsed / 1000).toFixed(1);
+      providerBadge.textContent = '\u26a1 Generated in ' + secs + 's';
+    } else {
+      providerBadge.textContent = '\u26a1 Generated Successfully';
+    }
     providerBadge.style.display = 'inline-flex';
-    providerBadge.className = 'provider-badge provider-' + (data._providerId || 'unknown');
+    providerBadge.className = 'provider-badge';
   } else if (providerBadge) {
     providerBadge.style.display = 'none';
   }
