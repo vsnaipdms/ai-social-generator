@@ -166,31 +166,35 @@ async function callProvider(provider, apiKey, prompt, signal, emit) {
       const response = await fetch(req.url, { ...req.options, signal: controller.signal });
       const elapsed = Date.now() - start;
 
-      console.log(`[${provider.name}] Attempt ${attempt}: ${response.status}, ${elapsed}ms`);
+      console.log("Provider:", provider.name);
+      console.log("Response:", response.status, response.statusText);
 
-      if (response.ok) {
-        const json = await response.json();
-        const text = provider.parseResponse(json);
-        if (text && text.trim()) {
-          console.log(`[${provider.name}] Success (${elapsed}ms)`);
-          return { text: text.trim(), provider: provider.id, providerName: provider.name, model, elapsed };
+      if (!response.ok) {
+        let errMsg;
+        try {
+          const errJson = await response.json();
+          errMsg = errJson.error?.message || errJson.error || JSON.stringify(errJson);
+        } catch {
+          errMsg = response.statusText;
         }
-        console.log(`[${provider.name}] Empty response`);
+        console.log(`[${provider.name}] Error: ${errMsg.slice(0, 100)}`);
+
+        if (!isRetryableError(errMsg, response.status)) {
+          return { error: errMsg, code: 'non_retryable' };
+        }
         continue;
       }
 
-      let errMsg;
-      try {
-        const errJson = await response.json();
-        errMsg = errJson.error?.message || errJson.error || JSON.stringify(errJson);
-      } catch {
-        errMsg = response.statusText;
-      }
-      console.log(`[${provider.name}] Error: ${errMsg.slice(0, 100)}`);
+      const json = await response.json();
+      const text = provider.parseResponse(json);
 
-      if (!isRetryableError(errMsg, response.status)) {
-        return { error: errMsg, code: 'non_retryable' };
+      if (!text || !text.trim()) {
+        console.log(`[${provider.name}] Empty/invalid response content`);
+        continue;
       }
+
+      console.log(`[${provider.name}] Success (${elapsed}ms): ${text.slice(0, 60)}...`);
+      return { text: text.trim(), provider: provider.id, providerName: provider.name, model, elapsed };
 
     } catch (err) {
       if (err.name === 'AbortError') {

@@ -212,10 +212,10 @@ module.exports = async (req, res) => {
 
   res.writeHead(200, { "Content-Type": "application/x-ndjson" });
 
-  let didWriteFinal = false;
+  let ended = false;
   function emit(msg) {
     try {
-      if (!didWriteFinal) res.write(JSON.stringify(msg) + "\n");
+      if (!ended) res.write(JSON.stringify(msg) + "\n");
     } catch (e) {}
   }
 
@@ -224,28 +224,34 @@ module.exports = async (req, res) => {
     const result = await apiService.generate(prompt, { onStatus: emit });
 
     if (result.success) {
-      didWriteFinal = true;
-      trackEvent("provider_used", { provider: result.provider, model: result.model, elapsed: result.elapsed });
-      emit({
-        status: "success",
-        content: result.content,
-        provider: result.providerName,
-        providerId: result.provider,
-        model: result.model,
-        elapsed: result.elapsed,
-        platform: req.body.platform || "",
-        contentType: req.body.contentType || "",
-        tone: req.body.tone || "",
-        language: req.body.language || "",
-        goal: req.body.goal || "",
-        businessType: req.body.businessType || "",
-        writingStyle: req.body.writingStyle || "",
-        length: req.body.length || "",
-        audience: req.body.audience || "",
-        englishLevel: req.body.englishLevel || ""
-      });
+      if (!result.content || !result.content.trim()) {
+        console.error("Empty content from provider:", result.provider);
+        emit({ status: "error", error: "Provider returned empty response.", code: "empty_content" });
+        trackEvent("failed_generation", { code: "empty_content", provider: result.provider });
+      } else {
+        trackEvent("provider_used", { provider: result.provider, model: result.model, elapsed: result.elapsed });
+        emit({
+          status: "success",
+          success: true,
+          provider: result.providerName,
+          content: result.content,
+          _provider: result.providerName,
+          _providerId: result.provider,
+          _model: result.model,
+          _elapsed: result.elapsed,
+          platform: req.body.platform || "",
+          contentType: req.body.contentType || "",
+          tone: req.body.tone || "",
+          language: req.body.language || "",
+          goal: req.body.goal || "",
+          businessType: req.body.businessType || "",
+          writingStyle: req.body.writingStyle || "",
+          length: req.body.length || "",
+          audience: req.body.audience || "",
+          englishLevel: req.body.englishLevel || ""
+        });
+      }
     } else {
-      didWriteFinal = true;
       trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
       emit({
         status: "error",
@@ -256,15 +262,17 @@ module.exports = async (req, res) => {
     }
 
   } catch (err) {
-    didWriteFinal = true;
-    if (err.name === "AbortError") {
-      emit({ status: "error", error: "Request taking too long. Please retry.", code: "timeout" });
-    } else {
-      console.error("Server error:", err.message);
-      emit({ status: "error", error: "Failed to generate content. Please try again.", code: "server_error" });
+    if (!ended) {
+      if (err.name === "AbortError") {
+        emit({ status: "error", error: "Request taking too long. Please retry.", code: "timeout" });
+      } else {
+        console.error("Server error:", err.message);
+        emit({ status: "error", error: "Failed to generate content. Please try again.", code: "server_error" });
+      }
     }
   }
 
+  ended = true;
   try { res.end(); } catch (e) {}
 };
 

@@ -341,21 +341,26 @@ async function handleGenerate() {
     }
 
     if (resultData) {
-      currentData = {
-        ...payload,
-        platform: dom.platform?.value,
-        contentType: dom.contentType?.value,
-        _provider: resultData.provider,
-        _providerId: resultData.providerId,
-        _model: resultData.model,
-        _elapsed: resultData.elapsed
-      };
-      const sections = parseOutput(resultData.content);
-      renderOutput(sections, currentData);
-      showState('result');
-      addHistory(currentData, resultData.content);
-      setCooldownTimer();
-      trackEvent('provider_used', { provider: resultData.providerId, model: resultData.model, elapsed: resultData.elapsed });
+      if (!resultData.content || !resultData.content.trim()) {
+        showState('error', 'Empty Response', 'The provider returned empty content. Please try again.');
+        trackEvent('failed_generation', { code: 'empty_content' });
+      } else {
+        currentData = {
+          ...payload,
+          platform: dom.platform?.value,
+          contentType: dom.contentType?.value,
+          _provider: resultData.provider || resultData._provider,
+          _providerId: resultData.providerId || resultData._providerId,
+          _model: resultData.model || resultData._model,
+          _elapsed: resultData.elapsed || resultData._elapsed
+        };
+        const sections = parseOutput(resultData.content);
+        renderOutput(sections, currentData);
+        showState('result');
+        addHistory(currentData, resultData.content);
+        setCooldownTimer();
+        trackEvent('provider_used', { provider: currentData._providerId, model: currentData._model, elapsed: currentData._elapsed });
+      }
     } else if (errorData) {
       trackEvent('failed_generation', { code: errorData.code || '' });
       if (errorData.code === 'quota_exceeded') trackEvent('quota_error', {});
