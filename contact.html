@@ -240,5 +240,10 @@
       });
     });
   </script>
+  <button id="scrollTopBtn" class="scroll-top-btn" aria-label="Scroll to top"><i class="fas fa-arrow-up"></i></button>
+  <script>
+    window.addEventListener('scroll', function(){var btn=document.getElementById('scrollTopBtn');if(btn)btn.classList.toggle('visible',window.scrollY>400);});
+    document.addEventListener('click',function(e){if(e.target.closest('#scrollTopBtn'))window.scrollTo({top:0,behavior:'smooth'});});
+  </script>
 </body>
 </html>
