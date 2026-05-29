@@ -275,6 +275,7 @@ async function handleGenerate() {
 
   setButtonsLoading(true);
   showState('loading');
+  if (dom.loadingText) dom.loadingText.textContent = 'Connecting...';
 
   currentAbort = new AbortController();
   const timeoutId = setTimeout(() => currentAbort.abort(), TIMEOUT_MS);
@@ -306,30 +307,62 @@ async function handleGenerate() {
       body: JSON.stringify(payload),
       signal: currentAbort.signal
     });
-    const json = await res.json();
 
-    if (!res.ok) {
-      trackEvent('failed_generation', { status: res.status, code: json.code || '' });
-      if (json.code === 'quota_exceeded') trackEvent('quota_error', {});
-      if (json.code === 'timeout') {
-        showState('error', 'Request taking too long. Please retry.', '');
-      } else if (json.code === 'quota_exceeded' || res.status === 429) {
-        showState('error', json.error || 'AI service busy', json.detail || 'Please wait a few seconds and try again.');
-      } else if (res.status === 400) {
-        showState('error', 'Validation Error', json.error);
-      } else {
-        showState('error', json.error || 'Generation Failed', json.detail || '');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let resultData = null;
+    let errorData = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.status === 'trying') {
+            if (dom.loadingText) dom.loadingText.textContent = 'Trying ' + msg.provider + '...';
+          } else if (msg.status === 'switching') {
+            if (dom.loadingText) dom.loadingText.textContent = 'Switching to ' + msg.to + '...';
+          } else if (msg.status === 'done') {
+            if (dom.loadingText) dom.loadingText.textContent = 'Generating with ' + msg.provider + '...';
+          } else if (msg.status === 'success') {
+            resultData = msg;
+          } else if (msg.status === 'error') {
+            errorData = msg;
+          }
+        } catch (e) {}
       }
-      return;
     }
 
-    currentData = { ...payload, platform: dom.platform?.value, contentType: dom.contentType?.value, _provider: json.data._provider, _providerId: json.data._providerId, _model: json.data._model, _elapsed: json.data._elapsed };
-    const sections = parseOutput(json.data.content);
-    renderOutput(sections, currentData);
-    showState('result');
-    addHistory(currentData, json.data.content);
-    setCooldownTimer();
-    trackEvent('provider_used', { provider: json.data._providerId, model: json.data._model, elapsed: json.data._elapsed });
+    if (resultData) {
+      currentData = {
+        ...payload,
+        platform: dom.platform?.value,
+        contentType: dom.contentType?.value,
+        _provider: resultData.provider,
+        _providerId: resultData.providerId,
+        _model: resultData.model,
+        _elapsed: resultData.elapsed
+      };
+      const sections = parseOutput(resultData.content);
+      renderOutput(sections, currentData);
+      showState('result');
+      addHistory(currentData, resultData.content);
+      setCooldownTimer();
+      trackEvent('provider_used', { provider: resultData.providerId, model: resultData.model, elapsed: resultData.elapsed });
+    } else if (errorData) {
+      trackEvent('failed_generation', { code: errorData.code || '' });
+      if (errorData.code === 'quota_exceeded') trackEvent('quota_error', {});
+      showState('error', errorData.error || 'Generation Failed', errorData.detail || '');
+    } else {
+      showState('error', 'Generation Failed', 'No response received.');
+    }
 
   } catch (err) {
     if (err.name === 'AbortError') {

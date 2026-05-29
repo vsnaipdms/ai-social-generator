@@ -187,6 +187,10 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
@@ -206,48 +210,62 @@ module.exports = async (req, res) => {
     });
   }
 
+  res.writeHead(200, { "Content-Type": "application/x-ndjson" });
+
+  let didWriteFinal = false;
+  function emit(msg) {
+    try {
+      if (!didWriteFinal) res.write(JSON.stringify(msg) + "\n");
+    } catch (e) {}
+  }
+
   try {
     const prompt = buildPrompt(req.body);
-    const result = await apiService.generate(prompt);
+    const result = await apiService.generate(prompt, { onStatus: emit });
 
     if (result.success) {
+      didWriteFinal = true;
       trackEvent("provider_used", { provider: result.provider, model: result.model, elapsed: result.elapsed });
-      return res.status(200).json({
-        success: true,
-        data: {
-          content: result.content,
-          platform: req.body.platform || "",
-          contentType: req.body.contentType || "",
-          tone: req.body.tone || "",
-          language: req.body.language || "",
-          goal: req.body.goal || "",
-          businessType: req.body.businessType || "",
-          writingStyle: req.body.writingStyle || "",
-          length: req.body.length || "",
-          audience: req.body.audience || "",
-          englishLevel: req.body.englishLevel || "",
-          _provider: result.providerName,
-          _providerId: result.provider,
-          _model: result.model,
-          _elapsed: result.elapsed
-        }
+      emit({
+        status: "success",
+        content: result.content,
+        provider: result.providerName,
+        providerId: result.provider,
+        model: result.model,
+        elapsed: result.elapsed,
+        platform: req.body.platform || "",
+        contentType: req.body.contentType || "",
+        tone: req.body.tone || "",
+        language: req.body.language || "",
+        goal: req.body.goal || "",
+        businessType: req.body.businessType || "",
+        writingStyle: req.body.writingStyle || "",
+        length: req.body.length || "",
+        audience: req.body.audience || "",
+        englishLevel: req.body.englishLevel || ""
+      });
+    } else {
+      didWriteFinal = true;
+      trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
+      emit({
+        status: "error",
+        error: result.error || "All AI providers are currently unavailable.",
+        detail: result.detail || "Please try again in a few moments.",
+        code: result.code || "all_providers_failed"
       });
     }
 
-    trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
-    return res.status(429).json({
-      error: result.error || "All AI providers are currently unavailable.",
-      detail: result.detail || "Please try again in a few moments.",
-      code: result.code || "all_providers_failed"
-    });
-
   } catch (err) {
+    didWriteFinal = true;
     if (err.name === "AbortError") {
-      return res.status(504).json({ error: "Request taking too long. Please retry.", code: "timeout" });
+      emit({ status: "error", error: "Request taking too long. Please retry.", code: "timeout" });
+    } else {
+      console.error("Server error:", err.message);
+      emit({ status: "error", error: "Failed to generate content. Please try again.", code: "server_error" });
     }
-    console.error("Server error:", err.message);
-    return res.status(500).json({ error: "Failed to generate content. Please try again.", code: "server_error" });
   }
+
+  try { res.end(); } catch (e) {}
 };
 
 function trackEvent(name, data) {
