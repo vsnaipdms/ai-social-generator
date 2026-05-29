@@ -6,6 +6,13 @@
   <title>Contact Us - AIDMT</title>
   <meta name="description" content="Get in touch with AIDMT. We offer Digital Marketing, Website Design, Graphic Design, SEO, AI and Art Services.">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VXZPNTK722"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-VXZPNTK722');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -162,11 +169,20 @@
   </footer>
 
   <script>
+    function trackEvent(name, params) {
+      try { if (typeof gtag === 'function') gtag('event', name, params || {}); } catch (e) {}
+    }
+
+    document.querySelectorAll('a[href*="wa.me"]').forEach(function(a) {
+      a.addEventListener('click', function() { trackEvent('whatsapp_click', { text: this.textContent.trim().slice(0, 30) }); });
+    });
+
     document.querySelectorAll('.service-card-contact').forEach(card => {
       card.addEventListener('click', function() {
         document.querySelectorAll('.service-card-contact').forEach(c => c.classList.remove('active'));
         this.classList.add('active');
         document.getElementById('contactService').value = this.dataset.service;
+        trackEvent('service_card_click', { service: this.dataset.service });
       });
     });
 
@@ -177,6 +193,7 @@
       const service = document.getElementById('contactService').value;
       const message = document.getElementById('contactMessage').value.trim();
       if (!name || !phone || !message) { alert('Please fill all fields.'); return; }
+      trackEvent('contact_form_submit', { service: service || 'none' });
       const text = encodeURIComponent(
         `Hi Venkat Shyam.N,%0A%0AI am interested in your services.%0A%0A*Name:* ${name}%0A*Phone:* ${phone}%0A*Service:* ${service || 'Not specified'}%0A*Message:* ${message}`
       );

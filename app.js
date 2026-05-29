@@ -1,3 +1,7 @@
+function trackEvent(name, params) {
+  try { if (typeof gtag === 'function') gtag('event', name, params || {}); } catch (e) {}
+}
+
 const dom = {
   businessType: document.getElementById('businessType'),
   platform: document.getElementById('platform'),
@@ -188,6 +192,14 @@ async function handleGenerate() {
     return;
   }
 
+  trackEvent('generate_content', {
+    platform: dom.platform?.value || '',
+    content_type: dom.contentType?.value || '',
+    length: dom.length?.value || '',
+    goal: dom.goal?.value || '',
+    tone: dom.tone?.value || ''
+  });
+
   if (dom.generateBtn) { dom.generateBtn.classList.add('loading'); dom.generateBtn.disabled = true; }
   if (dom.regenerateBtn) dom.regenerateBtn.disabled = true;
   showState('loading');
@@ -246,6 +258,7 @@ function handleCopy() {
   let text = '';
   document.querySelectorAll('.card-body').forEach(c => { const t = c.textContent; if (t && t !== '\u2014') text += t + '\n\n'; });
   if (!text.trim()) return;
+  trackEvent('copy_content');
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text.trim()).then(() => feedback(dom.copyBtn, 'Copied!')).catch(() => fallbackCopy(text.trim()));
   else fallbackCopy(text.trim());
 }
@@ -260,6 +273,7 @@ function fallbackCopy(text) {
 
 function handleDownloadTxt() {
   if (!currentContent) return;
+  trackEvent('download_txt');
   const blob = new Blob([currentContent], { type: 'text/plain;charset=utf-8' });
   downloadBlob(blob, (dom.platform?.value || 'content') + '_' + ((dom.businessType?.value || '').replace(/\s+/g, '_') || 'content') + '.txt');
   feedback(dom.downloadTxtBtn, 'Downloaded!');
@@ -267,6 +281,7 @@ function handleDownloadTxt() {
 
 function handleDownloadDoc() {
   if (!currentContent) return;
+  trackEvent('download_doc');
   const html = '<html><body><pre style="font-family:Inter,sans-serif;font-size:14px;line-height:1.7">' + currentContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></body></html>';
   downloadBlob(new Blob([html], { type: 'application/msword' }), (dom.platform?.value || 'content') + '_' + ((dom.businessType?.value || '').replace(/\s+/g, '_') || 'content') + '.doc');
   feedback(dom.downloadDocBtn, 'Downloaded!');
@@ -415,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.querySelectorAll('.preset-chip').forEach(chip => {
     chip.addEventListener('click', function() {
+      trackEvent('preset_click', { preset: this.dataset.preset });
       applyPreset(this.dataset.preset);
     });
   });
@@ -423,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.preset-card').forEach(card => {
     card.addEventListener('click', function() {
       const preset = this.dataset.preset;
-      if (preset) applyPreset(preset);
+      if (preset) { trackEvent('preset_click', { preset: preset, source: 'section' }); applyPreset(preset); }
       const target = document.getElementById('tools');
       if (target) target.scrollIntoView({ behavior: 'smooth' });
     });
@@ -434,6 +450,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const item = this.closest('.faq-item');
       if (item) item.classList.toggle('active');
     });
+  });
+
+  document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
+    a.addEventListener('click', function() { trackEvent('whatsapp_click', { text: this.textContent.trim().slice(0, 30) }); });
   });
 
   const navToggle = document.getElementById('navToggle');
