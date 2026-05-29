@@ -6,7 +6,7 @@ const PROVIDERS = [
   {
     id: 'groq', name: 'Groq', envKey: 'GROQ_API_KEY',
     baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-    defaultModel: 'llama3-70b-8192',
+    defaultModel: 'llama-3.3-70b-versatile',
     formatRequest(apiKey, prompt, model) {
       return {
         url: this.baseUrl,
@@ -22,7 +22,7 @@ const PROVIDERS = [
   {
     id: 'openrouter', name: 'OpenRouter', envKey: 'OPENROUTER_API_KEY',
     baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-    defaultModel: 'google/gemini-2.0-flash-exp:free',
+    defaultModel: 'mistralai/mistral-7b-instruct:free',
     formatRequest(apiKey, prompt, model) {
       return {
         url: this.baseUrl,
@@ -38,7 +38,7 @@ const PROVIDERS = [
   {
     id: 'gemini', name: 'Gemini', envKey: 'GEMINI_API_KEY',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     formatRequest(apiKey, prompt, model) {
       const m = model || this.defaultModel;
       return { url: `${this.baseUrl}/${m}:generateContent?key=${apiKey}`, options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }) } };
