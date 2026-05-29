@@ -94,30 +94,6 @@ const PROVIDERS = [
       return null;
     }
   },
-  {
-    id: 'togetherai',
-    name: 'Together AI',
-    envKey: 'TOGETHER_API_KEY',
-    baseUrl: 'https://api.together.xyz/v1/chat/completions',
-    defaultModel: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
-    formatRequest(apiKey, prompt, model) {
-      return {
-        url: this.baseUrl,
-        options: {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: model || this.defaultModel,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7, max_tokens: 4096
-          })
-        }
-      };
-    },
-    parseResponse(json) {
-      return json.choices?.[0]?.message?.content;
-    }
-  }
 ];
 
 const MAX_RETRIES = 3;
@@ -213,11 +189,41 @@ async function callProvider(provider, apiKey, prompt, signal) {
   return { error: `All models exhausted for ${provider.name}`, code: 'models_exhausted' };
 }
 
+const TOGETHER_PROVIDER = {
+  id: 'togetherai',
+  name: 'Together AI',
+  envKey: 'TOGETHER_API_KEY',
+  baseUrl: 'https://api.together.xyz/v1/chat/completions',
+  defaultModel: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+  formatRequest(apiKey, prompt, model) {
+    return {
+      url: this.baseUrl,
+      options: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: model || this.defaultModel,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7, max_tokens: 4096
+        })
+      }
+    };
+  },
+  parseResponse(json) {
+    return json.choices?.[0]?.message?.content;
+  }
+};
+
 async function generate(prompt, options = {}) {
   const { signal } = options;
   const lastError = { msg: '', code: '' };
 
-  for (const provider of PROVIDERS) {
+  const activeProviders = [...PROVIDERS];
+  if (process.env.ENABLE_TOGETHER_AI === 'true' && process.env.TOGETHER_API_KEY) {
+    activeProviders.push(TOGETHER_PROVIDER);
+  }
+
+  for (const provider of activeProviders) {
     const apiKey = process.env[provider.envKey];
     if (!apiKey) {
       console.log(`[${provider.name}] No API key set, skipping`);
@@ -246,9 +252,9 @@ async function generate(prompt, options = {}) {
   const friendly = friendlyError(lastError.msg, lastError.code);
   return {
     success: false,
-    error: friendly.error,
-    detail: friendly.detail,
-    code: friendly.code
+    error: "All AI providers temporarily unavailable. Please retry.",
+    detail: friendly.detail || "All providers exhausted.",
+    code: friendly.code || "all_providers_failed"
   };
 }
 
