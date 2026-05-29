@@ -98,8 +98,8 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon"><i class="fas fa-magic"></i></div>
-          <h3>Smart Presets</h3>
-          <p>Pre-built templates for Artist, Real Estate, Small Business and Personal Branding.</p>
+          <h3>8 Smart Presets</h3>
+          <p>Pre-built templates for Artist, Real Estate, SEO, Google Ads, WhatsApp and more.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon"><i class="fas fa-download"></i></div>
@@ -125,20 +125,27 @@
               <h3><i class="fas fa-sliders-h"></i> Content Settings</h3>
             </div>
 
-            <div class="preset-bar">
-              <label>Quick Preset</label>
-              <select id="presetSelect" class="form-input">
-                <option value="">Select a preset...</option>
-                <option value="artist">Artist Marketing</option>
-                <option value="realestate">Real Estate Marketing</option>
-                <option value="smallbiz">Small Business Marketing</option>
-                <option value="personal">Personal Branding</option>
-              </select>
+            <div class="preset-chips-bar">
+              <div class="preset-chips-header">
+                <label>Quick Presets</label>
+                <button id="resetPresetBtn" class="preset-reset-btn"><i class="fas fa-undo"></i> Reset</button>
+              </div>
+              <div class="preset-chips" id="presetChips">
+                <button class="preset-chip" data-preset="artist"><i class="fas fa-palette"></i> Artist</button>
+                <button class="preset-chip" data-preset="realestate"><i class="fas fa-building"></i> Real Estate</button>
+                <button class="preset-chip" data-preset="smallbiz"><i class="fas fa-store"></i> Small Biz</button>
+                <button class="preset-chip" data-preset="personal"><i class="fas fa-user-tie"></i> Personal</button>
+                <button class="preset-chip" data-preset="seo"><i class="fas fa-chart-line"></i> SEO</button>
+                <button class="preset-chip" data-preset="googleads"><i class="fas fa-ad"></i> Google Ads</button>
+                <button class="preset-chip" data-preset="whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                <button class="preset-chip" data-preset="website"><i class="fas fa-globe"></i> Website</button>
+              </div>
             </div>
 
             <div class="form-group">
               <label>Business Type / Topic</label>
               <input type="text" id="businessType" placeholder="e.g. Fitness Coach, Bakery, SaaS Startup..." class="form-input">
+              <span class="form-helper">Tell us what your business or niche is about</span>
             </div>
 
             <div class="form-row">
@@ -154,6 +161,7 @@
                   <option value="Google Ads">Google Ads</option>
                   <option value="WhatsApp">WhatsApp</option>
                 </select>
+                <span class="form-helper">Content will be optimized for your chosen platform</span>
               </div>
               <div class="form-group">
                 <label>Content Type</label>
@@ -195,6 +203,7 @@
                   <option value="Parents">Parents</option>
                   <option value="Local Businesses">Local Businesses</option>
                 </select>
+                <span class="form-helper">Content will speak directly to your target audience</span>
               </div>
               <div class="form-group">
                 <label>Language</label>
@@ -203,6 +212,7 @@
                   <option value="Telugu">Telugu</option>
                   <option value="Hindi">Hindi</option>
                 </select>
+                <span class="form-helper">Generate content in your preferred language</span>
               </div>
             </div>
 
@@ -215,6 +225,7 @@
                   <option value="Professional English">Professional English</option>
                   <option value="Advanced English">Advanced English</option>
                 </select>
+                <span class="form-helper">Controls vocabulary complexity and sentence structure</span>
               </div>
               <div class="form-group">
                 <label>Writing Style</label>
@@ -228,6 +239,7 @@
                   <option value="Luxury">Luxury</option>
                   <option value="Casual">Casual</option>
                 </select>
+                <span class="form-helper">How the copy reads &mdash; from conversational to authoritative</span>
               </div>
               <div class="form-group">
                 <label>Tone</label>
@@ -238,6 +250,7 @@
                   <option value="Emotional">Emotional</option>
                   <option value="Sales Focused">Sales Focused</option>
                 </select>
+                <span class="form-helper">Sets the mood and emotional direction of your content</span>
               </div>
             </div>
 
@@ -250,6 +263,7 @@
                   <option value="Long">Long</option>
                   <option value="Detailed">Detailed</option>
                 </select>
+                <span class="form-helper">Short: 80-120 words &middot; Medium: 150-250 &middot; Long: 300-450 &middot; Detailed: 500+</span>
               </div>
               <div class="form-group">
                 <label>Goal</label>
@@ -261,6 +275,7 @@
                   <option value="Followers">Followers</option>
                   <option value="Website Traffic">Website Traffic</option>
                 </select>
+                <span class="form-helper">What action do you want your audience to take?</span>
               </div>
               <div class="form-group">
                 <label>Variations</label>
@@ -269,6 +284,7 @@
                   <option value="3">3</option>
                   <option value="5">5</option>
                 </select>
+                <span class="form-helper">Get multiple angles of the same content</span>
               </div>
             </div>
 
@@ -322,12 +338,12 @@
               </div>
 
               <div class="output-grid">
-                <div class="output-card" id="cardHook"><div class="card-label"><i class="fas fa-fish"></i> Hook</div><div class="card-body" id="hookContent"></div></div>
-                <div class="output-card full-w" id="cardMain"><div class="card-label"><i class="fas fa-file-lines"></i> Main Content</div><div class="card-body" id="mainContent"></div></div>
-                <div class="output-card" id="cardCta"><div class="card-label"><i class="fas fa-bullhorn"></i> Call to Action</div><div class="card-body" id="ctaContent"></div></div>
-                <div class="output-card" id="cardHashtags"><div class="card-label"><i class="fas fa-hashtag"></i> Hashtags</div><div class="card-body" id="hashtagContent"></div></div>
-                <div class="output-card" id="cardSeo"><div class="card-label"><i class="fas fa-chart-simple"></i> SEO Keywords</div><div class="card-body" id="seoContent"></div></div>
-                <div class="output-card full-w" id="cardVariations"><div class="card-label"><i class="fas fa-copy"></i> Alternative Versions</div><div class="card-body" id="variationsContent"></div></div>
+                <div class="output-card" id="cardHook"><div class="card-label"><i class="fas fa-fish"></i> Hook<button class="copy-card-btn" onclick="copySection('hookContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="hookContent"></div></div>
+                <div class="output-card full-w" id="cardMain"><div class="card-label"><i class="fas fa-file-lines"></i> Main Content<button class="copy-card-btn" onclick="copySection('mainContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="mainContent"></div></div>
+                <div class="output-card" id="cardCta"><div class="card-label"><i class="fas fa-bullhorn"></i> Call to Action<button class="copy-card-btn" onclick="copySection('ctaContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="ctaContent"></div></div>
+                <div class="output-card" id="cardHashtags"><div class="card-label"><i class="fas fa-hashtag"></i> Hashtags<button class="copy-card-btn" onclick="copySection('hashtagContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="hashtagContent"></div></div>
+                <div class="output-card" id="cardSeo"><div class="card-label"><i class="fas fa-chart-simple"></i> SEO Keywords<button class="copy-card-btn" onclick="copySection('seoContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="seoContent"></div></div>
+                <div class="output-card full-w" id="cardVariations"><div class="card-label"><i class="fas fa-copy"></i> Alternative Versions<button class="copy-card-btn" onclick="copySection('variationsContent')" title="Copy"><i class="fas fa-copy"></i></button></div><div class="card-body" id="variationsContent"></div></div>
               </div>
 
               <div class="output-actions">
@@ -358,8 +374,8 @@
     <div class="container">
       <div class="section-header">
         <span class="section-badge">Presets</span>
-        <h2>Marketing Presets for Quick Start</h2>
-        <p>Pre-built configurations designed for specific industries. One click and you're ready to generate.</p>
+        <h2>8 Marketing Presets for Quick Start</h2>
+        <p>Pre-built configurations for every industry. One click and you're ready to generate.</p>
       </div>
       <div class="presets-grid">
         <div class="preset-card" data-preset="artist">
@@ -388,6 +404,34 @@
           <h3>Personal Branding</h3>
           <p>Build your professional brand with thought leadership content for LinkedIn.</p>
           <span class="preset-tag">LinkedIn</span>
+          <span class="preset-tag">Professional</span>
+        </div>
+        <div class="preset-card" data-preset="seo">
+          <div class="preset-icon" style="background:linear-gradient(135deg,#059669,#34d399)"><i class="fas fa-chart-line"></i></div>
+          <h3>SEO Content</h3>
+          <p>Optimized content that ranks. Blog posts, meta descriptions and keyword-rich copy.</p>
+          <span class="preset-tag">Website</span>
+          <span class="preset-tag">SEO</span>
+        </div>
+        <div class="preset-card" data-preset="googleads">
+          <div class="preset-icon" style="background:linear-gradient(135deg,#ea580c,#f97316)"><i class="fas fa-ad"></i></div>
+          <h3>Google Ads</h3>
+          <p>High-converting ad copy for Google Search, Display and Performance Max campaigns.</p>
+          <span class="preset-tag">Google Ads</span>
+          <span class="preset-tag">Sales</span>
+        </div>
+        <div class="preset-card" data-preset="whatsapp">
+          <div class="preset-icon" style="background:linear-gradient(135deg,#25D366,#075E54)"><i class="fab fa-whatsapp"></i></div>
+          <h3>WhatsApp Marketing</h3>
+          <p>Short, friendly WhatsApp messages for promotions, updates and customer engagement.</p>
+          <span class="preset-tag">WhatsApp</span>
+          <span class="preset-tag">Friendly</span>
+        </div>
+        <div class="preset-card" data-preset="website">
+          <div class="preset-icon" style="background:linear-gradient(135deg,#2563eb,#7c3aed)"><i class="fas fa-globe"></i></div>
+          <h3>Website Content</h3>
+          <p>Complete website copy — hero sections, about pages, service pages and landing pages.</p>
+          <span class="preset-tag">Website</span>
           <span class="preset-tag">Professional</span>
         </div>
       </div>

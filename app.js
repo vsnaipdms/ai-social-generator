@@ -68,6 +68,26 @@ const PRESETS = {
     businessType: 'Personal Brand / Coach', platform: 'LinkedIn', contentType: 'LinkedIn Post',
     audience: 'Professionals', tone: 'Professional', writingStyle: 'Storytelling', goal: 'Brand Awareness',
     length: 'Medium', englishLevel: 'Professional English'
+  },
+  seo: {
+    businessType: 'SEO Consulting Service', platform: 'Website', contentType: 'SEO Content',
+    audience: 'Small Business', tone: 'Professional', writingStyle: 'Professional', goal: 'Website Traffic',
+    length: 'Long', englishLevel: 'Professional English'
+  },
+  googleads: {
+    businessType: 'Product Brand', platform: 'Google Ads', contentType: 'Google Ads Copy',
+    audience: 'Customers', tone: 'Sales Focused', writingStyle: 'Persuasive', goal: 'Sales',
+    length: 'Short', englishLevel: 'Simple English'
+  },
+  whatsapp: {
+    businessType: 'Online Store', platform: 'WhatsApp', contentType: 'Social Media Post',
+    audience: 'Customers', tone: 'Friendly', writingStyle: 'Humanized', goal: 'Engagement',
+    length: 'Short', englishLevel: 'Simple English'
+  },
+  website: {
+    businessType: 'SaaS Platform', platform: 'Website', contentType: 'Website Content',
+    audience: 'Professionals', tone: 'Professional', writingStyle: 'Professional', goal: 'Leads',
+    length: 'Detailed', englishLevel: 'Professional English'
   }
 };
 
@@ -266,15 +286,27 @@ function feedback(el, msg) {
   setTimeout(() => { el.innerHTML = orig; el.style.pointerEvents = ''; }, 1500);
 }
 
-function applyPreset() {
-  const val = dom.presetSelect?.value;
-  if (!val || !PRESETS[val]) { if (dom.presetSelect) dom.presetSelect.value = ''; return; }
-  const p = PRESETS[val];
+function applyPreset(name) {
+  if (!name || !PRESETS[name]) return;
+  const p = PRESETS[name];
   Object.keys(p).forEach(key => {
     const el = document.getElementById(key);
-    if (el && (el.tagName === 'SELECT' || el.tagName === 'INPUT' && el.type === 'text')) el.value = p[key];
+    if (el) {
+      if (el.type === 'checkbox') el.checked = false;
+      else el.value = p[key] || '';
+    }
   });
-  if (dom.presetSelect) dom.presetSelect.value = '';
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector('.preset-chip[data-preset="' + name + '"]');
+  if (chip) chip.classList.add('active');
+}
+
+function resetForm() {
+  document.querySelectorAll('.form-input').forEach(i => {
+    if (i.type !== 'checkbox') i.value = i.defaultValue || '';
+    else i.checked = i.defaultChecked || false;
+  });
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
 }
 
 function addHistory(data, raw) {
@@ -358,19 +390,40 @@ function renderTemplates() {
   });
 }
 
+function copySection(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.textContent || el.textContent === '\u2014') return;
+  const text = el.textContent;
+  const btn = el.closest('.output-card')?.querySelector('.copy-card-btn');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => { if (btn) feedback(btn, 'Copied!'); }).catch(() => { if (btn) feedback(btn, 'Failed'); });
+  else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); if (btn) feedback(btn, 'Copied!'); } catch { if (btn) feedback(btn, 'Failed'); }
+    document.body.removeChild(ta);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   if (dom.generateBtn) dom.generateBtn.addEventListener('click', handleGenerate);
   if (dom.regenerateBtn) dom.regenerateBtn.addEventListener('click', handleGenerate);
   if (dom.copyBtn) dom.copyBtn.addEventListener('click', handleCopy);
   if (dom.downloadTxtBtn) dom.downloadTxtBtn.addEventListener('click', handleDownloadTxt);
   if (dom.downloadDocBtn) dom.downloadDocBtn.addEventListener('click', handleDownloadDoc);
-  if (dom.presetSelect) dom.presetSelect.addEventListener('change', applyPreset);
   if (dom.businessType) dom.businessType.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleGenerate(); });
+
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      applyPreset(this.dataset.preset);
+    });
+  });
+  document.getElementById('resetPresetBtn')?.addEventListener('click', resetForm);
 
   document.querySelectorAll('.preset-card').forEach(card => {
     card.addEventListener('click', function() {
       const preset = this.dataset.preset;
-      if (preset && dom.presetSelect) { dom.presetSelect.value = preset; applyPreset(); }
+      if (preset) applyPreset(preset);
       const target = document.getElementById('tools');
       if (target) target.scrollIntoView({ behavior: 'smooth' });
     });
