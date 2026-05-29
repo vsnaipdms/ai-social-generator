@@ -371,14 +371,17 @@ ul { list-style: none; }
 .feature-card p { font-size: 0.9rem; color: var(--gray-500); line-height: 1.7; }
 
 /* ===== DASHBOARD ===== */
-.section-tools { background: var(--gray-50); }
+.section-tools { background: var(--gray-50); overflow-x: hidden; }
 
 .dashboard {
   display: grid;
   grid-template-columns: 380px 1fr;
   gap: 24px;
   align-items: start;
+  max-width: 100%;
 }
+.dashboard-sidebar { min-width: 0; max-width: 100%; }
+.dashboard-main { min-width: 0; max-width: 100%; }
 
 .dash-card {
   background: var(--white);
@@ -386,6 +389,8 @@ ul { list-style: none; }
   border-radius: var(--radius-lg);
   padding: 24px;
   transition: border-color var(--transition);
+  max-width: 100%;
+  overflow: hidden;
 }
 .dash-card:hover { border-color: var(--gray-300); }
 .dash-card-sm { padding: 20px; }
@@ -480,9 +485,12 @@ ul { list-style: none; }
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--gray-200) transparent;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 .preset-chips::-webkit-scrollbar { height: 3px; }
 .preset-chips::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 3px; }
@@ -518,7 +526,7 @@ ul { list-style: none; }
 .preset-chip:hover i { color: var(--primary); }
 
 /* ===== FORMS ===== */
-.form-group { margin-bottom: 14px; }
+.form-group { margin-bottom: 14px; min-width: 0; }
 .form-group label {
   display: block;
   font-size: 0.72rem;
@@ -531,6 +539,7 @@ ul { list-style: none; }
 
 .form-input {
   width: 100%;
+  max-width: 100%;
   padding: 10px 12px;
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
@@ -1123,7 +1132,7 @@ select.form-input option { background: var(--white); color: var(--black); }
   .presets-grid { grid-template-columns: 1fr; }
   .why-grid { grid-template-columns: 1fr; }
   .testimonial-grid { grid-template-columns: 1fr; }
-  .form-row-3 { grid-template-columns: 1fr 1fr; }
+  .form-row-3 { grid-template-columns: 1fr; }
   .checkbox-grid { grid-template-columns: 1fr; }
   .output-grid { grid-template-columns: 1fr; }
   .dash-row { grid-template-columns: 1fr; }
@@ -1171,7 +1180,6 @@ select.form-input option { background: var(--white); color: var(--black); }
   .stat-label { font-size: 0.6rem; }
 
   .form-row { grid-template-columns: 1fr; }
-  .form-row-3 { grid-template-columns: 1fr; }
   .form-group { margin-bottom: 12px; }
   .form-input { padding: 9px 10px; font-size: 0.82rem; }
   .form-helper { font-size: 0.62rem; }
