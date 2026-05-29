@@ -199,6 +199,7 @@ module.exports = async (req, res) => {
   console.log("HF:", !!process.env.HF_TOKEN);
   console.log("TOGETHER:", !!process.env.TOGETHER_API_KEY);
   console.log("ENABLE_TOGETHER:", process.env.ENABLE_TOGETHER_AI);
+  console.log("ENABLE_HUGGINGFACE:", process.env.ENABLE_HUGGINGFACE);
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
@@ -262,15 +263,11 @@ module.exports = async (req, res) => {
         });
       }
     } else {
-      trackEvent("failed_generation", { code: result.code, error: result.error?.slice(0, 100) });
-      const hasProvider = result.providerName && result.detail && !result.detail.startsWith("All providers");
-      const errMsg = hasProvider
-        ? result.providerName + " failed: " + result.detail
-        : result.error || "All AI providers are currently unavailable.";
+      trackEvent("failed_generation", { code: result.code || 'all_providers_failed', error: result.error?.slice(0, 100) });
       emit({
         status: "error",
-        error: errMsg,
-        detail: hasProvider ? (result.providerName + ": " + result.detail) : (result.detail || ""),
+        error: result.error || "All AI providers are currently unavailable.",
+        detail: result.detail || "",
         code: result.code || "all_providers_failed",
         failedProvider: result.provider || null,
         failedProviderName: result.providerName || null
